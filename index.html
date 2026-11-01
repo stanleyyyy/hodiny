@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hodiny – precvičovanie času</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+	:root {
+		--bg: #fff8ec;
+		--card: #ffffff;
+		--ink: #2b2d42;
+		--muted: #7a7d95;
+		--hour: #e63946;
+		--minute: #1d6fd8;
+		--ok: #2a9d5c;
+		--bad: #e76f51;
+		--accent: #ffb703;
+		--face: #fffdf7;
+	}
+	* { box-sizing: border-box; }
+	body {
+		margin: 0;
+		font-family: "Baloo 2", system-ui, sans-serif;
+		color: var(--ink);
+		background: var(--bg);
+		background-image: radial-gradient(#ffe7b8 1.5px, transparent 1.5px);
+		background-size: 22px 22px;
+		min-height: 100vh;
+		-webkit-tap-highlight-color: transparent;
+	}
+	.wrap { max-width: 760px; margin: 0 auto; padding: 16px 16px 40px; }
+	h1 { margin: 4px 0 2px; font-size: clamp(28px, 6vw, 40px); font-weight: 800; text-align: center; }
+	h1 span { color: var(--hour); }
+	.sub { text-align: center; color: var(--muted); margin: 0 0 14px; font-size: 18px; }
+
+	.tabs, .levels { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 10px; }
+	.tab, .lvl {
+		border: 3px solid var(--ink); background: var(--card); color: var(--ink);
+		font: inherit; font-weight: 700; font-size: 17px; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+		box-shadow: 0 3px 0 var(--ink); transition: transform .08s;
+	}
+	.lvl { font-size: 15px; padding: 3px 12px; border-width: 2px; box-shadow: 0 2px 0 var(--ink); }
+	.tab:active, .lvl:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+	.tab.on { background: var(--accent); }
+	.lvl.on { background: #cfe8ff; }
+
+	.card {
+		background: var(--card); border: 3px solid var(--ink); border-radius: 26px;
+		box-shadow: 0 6px 0 var(--ink); padding: 16px; text-align: center;
+	}
+	.top { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 18px; margin-bottom: 4px; }
+	.dots { display: flex; gap: 5px; }
+	.dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--ink); background: #fff; }
+	.dot.ok { background: var(--ok); }
+	.dot.bad { background: var(--bad); }
+	.dot.cur { background: var(--accent); }
+
+	.question { font-size: clamp(22px, 5vw, 30px); font-weight: 800; margin: 4px 0 6px; min-height: 1.3em; }
+	.target {
+		display: inline-block; font-size: clamp(26px, 6vw, 38px); font-weight: 800; padding: 2px 18px; border-radius: 16px;
+		background: #fff3c4; border: 3px dashed var(--accent); margin-bottom: 6px;
+	}
+	.target small { display: block; font-size: 0.55em; color: var(--muted); font-weight: 700; margin-top: -6px; }
+
+	.clockbox { position: relative; width: min(340px, 86vw); margin: 0 auto; }
+	svg.clock { width: 100%; height: auto; display: block; touch-action: none; user-select: none; }
+	.hand { cursor: grab; }
+	.dragging .hand { cursor: grabbing; }
+
+	.legend { display: flex; gap: 14px; justify-content: center; font-size: 15px; color: var(--muted); margin: 4px 0 10px; flex-wrap: wrap; }
+	.legend b { display: inline-block; width: 22px; height: 8px; border-radius: 4px; vertical-align: middle; margin-right: 4px; }
+	.legend label { cursor: pointer; }
+
+	.answers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+	.ans {
+		font: inherit; font-weight: 800; font-size: clamp(20px, 4.6vw, 26px); padding: 10px 8px; border-radius: 18px;
+		border: 3px solid var(--ink); background: #f2f6ff; color: var(--ink); cursor: pointer; box-shadow: 0 4px 0 var(--ink);
+		line-height: 1.15;
+	}
+	.ans.words { font-size: clamp(17px, 4vw, 22px); }
+	.ans:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+	.ans.ok { background: var(--ok); color: #fff; }
+	.ans.bad { background: var(--bad); color: #fff; }
+	.ans:disabled { cursor: default; }
+
+	.setbtns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 4px 0 10px; }
+	.sb {
+		font: inherit; font-weight: 700; font-size: 17px; padding: 4px 12px; border-radius: 12px; cursor: pointer;
+		border: 2px solid var(--ink); background: #fff; box-shadow: 0 2px 0 var(--ink);
+	}
+	.sb.h { color: var(--hour); }
+	.sb.m { color: var(--minute); }
+	.big {
+		font: inherit; font-weight: 800; font-size: 24px; padding: 8px 30px; border-radius: 999px; cursor: pointer;
+		border: 3px solid var(--ink); background: var(--accent); color: var(--ink); box-shadow: 0 4px 0 var(--ink);
+	}
+	.big:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+
+	.feedback { min-height: 64px; margin-top: 12px; font-size: 21px; font-weight: 700; }
+	.feedback .ok { color: var(--ok); }
+	.feedback .bad { color: var(--bad); }
+	.feedback .hint { display: block; font-size: 17px; color: var(--muted); font-weight: 600; }
+
+	.result { padding: 20px 6px; }
+	.result .stars { font-size: 56px; letter-spacing: 6px; }
+	.result h2 { margin: 6px 0; font-size: 32px; }
+	.result p { font-size: 20px; margin: 4px 0 18px; }
+
+	.help { margin-top: 18px; background: #fff; border: 2px dashed var(--muted); border-radius: 18px; padding: 10px 16px; font-size: 17px; }
+	.help summary { cursor: pointer; font-weight: 800; }
+	.help table { border-collapse: collapse; margin: 8px auto; }
+	.help td { padding: 3px 12px; border-bottom: 1px solid #eee; text-align: left; }
+	.help td:first-child { font-weight: 800; text-align: right; }
+</style>
+</head>
+<body>
+<div class="wrap">
+	<h1>🕒 Koľko je <span>hodín</span>?</h1>
+	<p class="sub">Precvičovanie času pre 2. ročník</p>
+
+	<div class="tabs" id="tabs">
+		<button class="tab on" data-mode="read">Čítaj hodiny</button>
+		<button class="tab" data-mode="words">Povedz slovami</button>
+		<button class="tab" data-mode="set">Nastav hodiny</button>
+	</div>
+	<div class="levels" id="levels">
+		<button class="lvl on" data-lvl="1">⭐ Celé hodiny</button>
+		<button class="lvl" data-lvl="2">⭐⭐ Štvrť, pol, trištvrte</button>
+		<button class="lvl" data-lvl="3">⭐⭐⭐ Po 5 minútach</button>
+	</div>
+
+	<div class="card" id="card"></div>
+
+	<details class="help">
+		<summary>📖 Ťahák pre deti</summary>
+		<p><b style="color:var(--hour)">Malá ručička</b> ukazuje <b>hodiny</b>. <b style="color:var(--minute)">Veľká ručička</b> ukazuje <b>minúty</b>.<br>
+		Celé otočenie veľkej ručičky = 60 minút = 1 hodina.</p>
+		<table>
+			<tr><td>2:00</td><td>dve hodiny</td></tr>
+			<tr><td>2:15</td><td>štvrť na tri</td></tr>
+			<tr><td>2:30</td><td>pol tretej</td></tr>
+			<tr><td>2:45</td><td>trištvrte na tri</td></tr>
+			<tr><td>3:00</td><td>tri hodiny</td></tr>
+		</table>
+		<p>Pozor: pri „štvrť, pol, trištvrte“ hovoríme už o <b>nasledujúcej</b> hodine!</p>
+	</details>
+</div>
+
+<script>
+const ROUND = 10;
+const NOM = ["dvanásť hodín","jedna hodina","dve hodiny","tri hodiny","štyri hodiny","päť hodín","šesť hodín","sedem hodín","osem hodín","deväť hodín","desať hodín","jedenásť hodín"];
+const NA  = ["dvanásť","jednu","dve","tri","štyri","päť","šesť","sedem","osem","deväť","desať","jedenásť"];
+const POL = ["dvanástej","prvej","druhej","tretej","štvrtej","piatej","šiestej","siedmej","ôsmej","deviatej","desiatej","jedenástej"];
+const PRAISE = ["Výborne! 🎉","Super! ⭐","Správne! 👏","Paráda! 🥳","Si šikovný/á! 💪","Presne tak! ✅"];
+
+let mode = "read", level = 1;
+let qIndex = 0, results = [], current = null, locked = false;
+let setTotal = 0;	/* minutes 0..719 for "set" mode */
+let showMinutes = false;
+
+const rnd = n => Math.floor(Math.random() * n);
+const pick = a => a[rnd(a.length)];
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const h12 = h => ((h % 12) + 12) % 12 || 12;
+const digital = (h, m) => h12(h) + ":" + String(m).padStart(2, "0");
+
+function words(h, m) {
+	const nx = (h + 1) % 12;
+	if (m === 0) return NOM[h % 12];
+	if (m === 15) return "štvrť na " + NA[nx];
+	if (m === 30) return "pol " + POL[nx];
+	if (m === 45) return "trištvrte na " + NA[nx];
+	return null;
+}
+
+function randomTime(lvl) {
+	const h = 1 + rnd(12);
+	let m = 0;
+	if (lvl === 2) m = pick([0, 15, 30, 45, 15, 30, 45]);
+	if (lvl === 3) m = 5 * rnd(12);
+	return { h, m };
+}
+
+/* ---------- audio (optional) ---------- */
+let actx = null;
+function beep(ok) {
+	try {
+		actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+		const notes = ok ? [660, 880] : [300, 220];
+		notes.forEach((f, i) => {
+			const o = actx.createOscillator(), g = actx.createGain();
+			o.frequency.value = f; o.type = "triangle";
+			g.gain.setValueAtTime(0.12, actx.currentTime + i * 0.12);
+			g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + i * 0.12 + 0.18);
+			o.connect(g); g.connect(actx.destination);
+			o.start(actx.currentTime + i * 0.12); o.stop(actx.currentTime + i * 0.12 + 0.2);
+		});
+	} catch (e) {}
+}
+
+/* ---------- clock SVG ---------- */
+function clockSVG() {
+	let s = '<svg class="clock" id="clock" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">';
+	s += '<circle cx="150" cy="150" r="144" fill="var(--accent)" stroke="var(--ink)" stroke-width="5"/>';
+	s += '<circle cx="150" cy="150" r="130" fill="var(--face)" stroke="var(--ink)" stroke-width="3"/>';
+	for (let i = 0; i < 60; i++) {
+		const a = i * 6 * Math.PI / 180, big = i % 5 === 0;
+		const r1 = big ? 112 : 119, r2 = 126;
+		s += `<line x1="${150 + r1 * Math.sin(a)}" y1="${150 - r1 * Math.cos(a)}" x2="${150 + r2 * Math.sin(a)}" y2="${150 - r2 * Math.cos(a)}" stroke="var(--ink)" stroke-width="${big ? 4 : 1.5}" stroke-linecap="round"/>`;
+	}
+	for (let n = 1; n <= 12; n++) {
+		const a = n * 30 * Math.PI / 180, r = 92;
+		s += `<text x="${150 + r * Math.sin(a)}" y="${150 - r * Math.cos(a)}" text-anchor="middle" dominant-baseline="central" font-size="26" font-weight="800" fill="var(--ink)" font-family="Baloo 2, sans-serif">${n}</text>`;
+	}
+	s += '<g id="minnums" style="display:none">';
+	for (let n = 0; n < 12; n++) {
+		const a = n * 30 * Math.PI / 180, r = 136.5;
+		s += `<circle cx="${150 + r * Math.sin(a)}" cy="${150 - r * Math.cos(a)}" r="11" fill="var(--minute)"/>`;
+		s += `<text x="${150 + r * Math.sin(a)}" y="${150 - r * Math.cos(a)}" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="800" fill="#fff" font-family="Baloo 2, sans-serif">${String(n * 5).padStart(2, "0")}</text>`;
+	}
+	s += '</g>';
+	s += '<g id="hHand" class="hand"><line x1="150" y1="150" x2="150" y2="90" stroke="transparent" stroke-width="30"/><line x1="150" y1="162" x2="150" y2="88" stroke="var(--hour)" stroke-width="11" stroke-linecap="round"/></g>';
+	s += '<g id="mHand" class="hand"><line x1="150" y1="150" x2="150" y2="40" stroke="transparent" stroke-width="26"/><line x1="150" y1="166" x2="150" y2="38" stroke="var(--minute)" stroke-width="6" stroke-linecap="round"/></g>';
+	s += '<circle cx="150" cy="150" r="9" fill="var(--ink)"/><circle cx="150" cy="150" r="3.5" fill="var(--accent)"/>';
+	s += '</svg>';
+	return s;
+}
+
+function drawHands(totalMin) {
+	const hAng = (totalMin % 720) / 2;	/* 0.5° per minute */
+	const mAng = (totalMin % 60) * 6;
+	document.getElementById("hHand").setAttribute("transform", `rotate(${hAng} 150 150)`);
+	document.getElementById("mHand").setAttribute("transform", `rotate(${mAng} 150 150)`);
+}
+
+function legendHTML() {
+	return `<div class="legend">
+		<span><b style="background:var(--hour)"></b>malá = hodiny</span>
+		<span><b style="background:var(--minute)"></b>veľká = minúty</span>
+		<label><input type="checkbox" id="minToggle" ${showMinutes ? "checked" : ""}> ukáž minúty</label>
+	</div>`;
+}
+
+function bindLegend() {
+	const t = document.getElementById("minToggle");
+	const apply = () => document.getElementById("minnums").style.display = showMinutes ? "" : "none";
+	t.onchange = () => { showMinutes = t.checked; apply(); };
+	apply();
+}
+
+function dotsHTML() {
+	let s = '<div class="dots">';
+	for (let i = 0; i < ROUND; i++) {
+		const c = i < results.length ? (results[i] ? "ok" : "bad") : (i === qIndex ? "cur" : "");
+		s += `<span class="dot ${c}"></span>`;
+	}
+	return s + "</div>";
+}
+
+/* ---------- distractors ---------- */
+function digitalOptions(t) {
+	const correct = digital(t.h, t.m);
+	const set = new Set([correct]);
+	const cands = [];
+	cands.push(digital(t.h + 1, t.m), digital(t.h - 1, t.m));
+	if (t.m !== 0) {
+		/* swapped hands: minute hand read as hour, hour hand as minutes */
+		const mh = t.m / 5 || 12;
+		cands.push(digital(mh, (t.h % 12) * 5));
+		cands.push(digital(t.h, (60 - t.m) % 60));
+		cands.push(digital(t.h + 1, t.m));
+	} else {
+		cands.push(digital(t.h, 30), digital(12, (t.h % 12) * 5), digital(t.h + 6, 0));
+	}
+	if (level === 3) cands.push(digital(t.h, (t.m + 5) % 60), digital(t.h, (t.m + 55) % 60), digital(t.h, (t.m / 5) % 60));
+	shuffle(cands);
+	for (const c of cands) { if (set.size >= 4) break; set.add(c); }
+	while (set.size < 4) { const r = randomTime(level); set.add(digital(r.h, r.m)); }
+	return { correct, options: shuffle([...set]) };
+}
+
+function wordOptions(t) {
+	const correct = words(t.h, t.m);
+	const set = new Set([correct]);
+	const cands = [];
+	const nx = (t.h + 1) % 12;
+	if (t.m === 0) {
+		cands.push(NOM[nx], "pol " + POL[t.h % 12], "štvrť na " + NA[t.h % 12], NOM[(t.h + 11) % 12]);
+	} else {
+		/* typical mistake: using the current hour instead of the next one */
+		const wrongNext = t.h % 12;
+		if (t.m === 15) cands.push("štvrť na " + NA[wrongNext], "trištvrte na " + NA[nx], "pol " + POL[nx], NOM[t.h % 12]);
+		if (t.m === 30) cands.push("pol " + POL[wrongNext], "pol " + POL[(t.h + 2) % 12], "štvrť na " + NA[nx], "trištvrte na " + NA[nx]);
+		if (t.m === 45) cands.push("trištvrte na " + NA[wrongNext], "štvrť na " + NA[nx], "pol " + POL[nx], NOM[nx]);
+	}
+	shuffle(cands);
+	for (const c of cands) { if (set.size >= 4) break; set.add(c); }
+	while (set.size < 4) { const r = randomTime(2); set.add(words(r.h, r.m)); }
+	return { correct, options: shuffle([...set]) };
+}
+
+function explain(t) {
+	const w = words(t.h, t.m);
+	return `Správne je <b>${digital(t.h, t.m)}</b>${w ? " – <b>" + w + "</b>" : ""}.`;
+}
+
+/* ---------- game flow ---------- */
+function effectiveLevel() { return mode === "words" ? Math.min(level, 2) : level; }
+
+function startRound() {
+	qIndex = 0; results = [];
+	nextQuestion();
+}
+
+function nextQuestion() {
+	if (qIndex >= ROUND) return showResult();
+	locked = false;
+	let t;
+	do { t = randomTime(effectiveLevel()); } while (current && t.h === current.h && t.m === current.m);
+	current = t;
+	if (mode === "set") renderSet(); else renderChoice();
+}
+
+function renderChoice() {
+	const card = document.getElementById("card");
+	const t = current;
+	const isWords = mode === "words";
+	const { correct, options } = isWords ? wordOptions(t) : digitalOptions(t);
+	card.innerHTML = `
+		<div class="top"><span>Úloha ${qIndex + 1} / ${ROUND}</span>${dotsHTML()}</div>
+		<div class="question">${isWords ? "Ako to povieme slovami?" : "Koľko je hodín?"}</div>
+		<div class="clockbox">${clockSVG()}</div>
+		${legendHTML()}
+		<div class="answers">${options.map(o => `<button class="ans ${isWords ? "words" : ""}">${o}</button>`).join("")}</div>
+		<div class="feedback" id="fb"></div>`;
+	drawHands(t.h * 60 + t.m);
+	bindLegend();
+	card.querySelectorAll(".ans").forEach(b => b.onclick = () => {
+		if (locked) return;
+		locked = true;
+		const ok = b.textContent === correct;
+		card.querySelectorAll(".ans").forEach(x => {
+			x.disabled = true;
+			if (x.textContent === correct) x.classList.add("ok");
+		});
+		if (!ok) b.classList.add("bad");
+		finish(ok);
+	});
+}
+
+function renderSet() {
+	const card = document.getElementById("card");
+	const t = current;
+	const w = words(t.h, t.m);
+	/* start from a different random position */
+	do { setTotal = 60 * rnd(12) + (level === 1 ? 0 : 5 * rnd(12)); } while (setTotal === (t.h % 12) * 60 + t.m);
+	let target;
+	if (w && level > 1 && Math.random() < 0.5)
+		target = `${w}<small>(${digital(t.h, t.m)})</small>`;
+	else if (w && level === 1)
+		target = `${digital(t.h, t.m)}<small>${w}</small>`;
+	else
+		target = digital(t.h, t.m);
+	card.innerHTML = `
+		<div class="top"><span>Úloha ${qIndex + 1} / ${ROUND}</span>${dotsHTML()}</div>
+		<div class="question">Nastav na hodinách:</div>
+		<div class="target">${target}</div>
+		<div class="clockbox">${clockSVG()}</div>
+		${legendHTML()}
+		<div class="setbtns">
+			<button class="sb h" data-d="-60">◀ hodina</button>
+			<button class="sb h" data-d="60">hodina ▶</button>
+			<button class="sb m" data-d="-5">◀ 5 minút</button>
+			<button class="sb m" data-d="5">5 minút ▶</button>
+		</div>
+		<button class="big" id="check">Hotovo ✔</button>
+		<div class="feedback" id="fb"><span class="hint">Ťahaj ručičky prstom alebo myšou, alebo použi tlačidlá.</span></div>`;
+	drawHands(setTotal);
+	bindLegend();
+	card.querySelectorAll(".sb").forEach(b => b.onclick = () => {
+		if (locked) return;
+		setTotal = (setTotal + parseInt(b.dataset.d) + 720) % 720;
+		drawHands(setTotal);
+	});
+	bindDrag();
+	document.getElementById("check").onclick = () => {
+		if (locked) return;
+		locked = true;
+		const ok = setTotal === (t.h % 12) * 60 + t.m;
+		if (!ok) setTimeout(() => drawHands((t.h % 12) * 60 + t.m), 900);
+		finish(ok);
+	};
+}
+
+function bindDrag() {
+	const svg = document.getElementById("clock");
+	let drag = null;
+	const angleOf = e => {
+		const r = svg.getBoundingClientRect();
+		const x = (e.clientX - r.left) / r.width * 300 - 150;
+		const y = (e.clientY - r.top) / r.height * 300 - 150;
+		let a = Math.atan2(x, -y) * 180 / Math.PI;
+		return (a + 360) % 360;
+	};
+	const move = e => {
+		if (!drag || locked) return;
+		const a = angleOf(e);
+		if (drag === "m") {
+			const newM = Math.round(a / 30) * 5 % 60;
+			const oldM = setTotal % 60;
+			let d = newM - oldM;
+			if (d < -30) d += 60;
+			if (d > 30) d -= 60;
+			setTotal = (setTotal + d + 720) % 720;
+		} else {
+			setTotal = Math.floor(a / 30) * 60 + setTotal % 60;
+		}
+		drawHands(setTotal);
+	};
+	const start = (which) => e => {
+		if (locked) return;
+		drag = which;
+		svg.classList.add("dragging");
+		try { svg.setPointerCapture(e.pointerId); } catch (x) {}
+		e.preventDefault();
+	};
+	document.getElementById("mHand").addEventListener("pointerdown", start("m"));
+	document.getElementById("hHand").addEventListener("pointerdown", start("h"));
+	svg.addEventListener("pointermove", move);
+	const end = () => { drag = null; svg.classList.remove("dragging"); };
+	svg.addEventListener("pointerup", end);
+	svg.addEventListener("pointercancel", end);
+}
+
+function finish(ok) {
+	beep(ok);
+	results.push(ok);
+	const fb = document.getElementById("fb");
+	fb.innerHTML = ok
+		? `<span class="ok">${pick(PRAISE)}</span>`
+		: `<span class="bad">Ešte nie 🙂</span> <span class="hint">${explain(current)}</span>`;
+	fb.innerHTML += `<div style="margin-top:8px"><button class="big" id="next">${qIndex + 1 >= ROUND ? "Výsledok 🏆" : "Ďalej ▶"}</button></div>`;
+	const chk = document.getElementById("check");
+	if (chk) chk.style.display = "none";
+	document.querySelector(".top .dots").outerHTML = dotsHTML();
+	document.getElementById("next").onclick = () => { qIndex++; nextQuestion(); };
+}
+
+function showResult() {
+	const good = results.filter(Boolean).length;
+	const stars = good === ROUND ? 3 : good >= 7 ? 2 : good >= 4 ? 1 : 0;
+	const msg = ["Skús to ešte raz, ide ti to čoraz lepšie!", "Dobrá práca, len tak ďalej!", "Výborne! Si skoro majster hodín!", "Dokonalé! Si majster hodín! 🏆"][stars];
+	document.getElementById("card").innerHTML = `
+		<div class="result">
+			<div class="stars">${"⭐".repeat(stars)}${"☆".repeat(3 - stars)}</div>
+			<h2>${good} z ${ROUND} správne</h2>
+			<p>${msg}</p>
+			<button class="big" id="again">Hrať znova 🔄</button>
+		</div>`;
+	document.getElementById("again").onclick = startRound;
+}
+
+/* ---------- menu ---------- */
+document.querySelectorAll(".tab").forEach(b => b.onclick = () => {
+	document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === b));
+	mode = b.dataset.mode;
+	document.querySelector('.lvl[data-lvl="3"]').style.display = mode === "words" ? "none" : "";
+	if (mode === "words" && level === 3) selectLevel(2); else startRound();
+});
+function selectLevel(l) {
+	level = l;
+	document.querySelectorAll(".lvl").forEach(x => x.classList.toggle("on", +x.dataset.lvl === l));
+	startRound();
+}
+document.querySelectorAll(".lvl").forEach(b => b.onclick = () => selectLevel(+b.dataset.lvl));
+
+startRound();
+</script>
+</body>
+</html>
